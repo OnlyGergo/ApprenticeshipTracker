@@ -110,14 +110,21 @@ Do one per session/usage window. Tick off when done.
 - [x] **1 Foundation**: scaffold, tsconfig/bunfig/vite/RR config, `schema.sql`, migrate, `seed-ksbs`, auth, Elysia skeleton (exports `App` type) + static fallback, README. Done when it boots and `/` is auth-gated.
 - [x] **2 Core logic + tests**: `text.ts`, `parser.ts`, `chaining.ts`, `stats.ts`, `star.ts`. Done when tests pass.
 - [x] **3 API routes**: entries (CRUD + chaining), ksbs (+stats), evidence/uploads (quality, best flag), search.
-- [ ] **4 Frontend core**: root shell + dark/orange theme, dashboard, entry form, entry view, KSB detail, stale banner.
+- [x] **4 Frontend core**: root shell + dark/orange theme, dashboard, entry form, entry view, KSB detail, stale banner.
 - [ ] **5 Extras**: coverage chart, gaps, import (paste -> parse preview), settings, then reports API and zip backup/restore (last, most fiddly).
 
 ## Status
 
 _Update at the end of every stage: what's done, what's half-done, decisions made, known issues, exact next step._
 
-- Stage: 3 done (2026-10-13). Next: stage 4 (frontend core).
+- Stage: 4 done (2026-10-13). Next: stage 5 (extras).
+- Stage 4 done: root shell (nav + stale banner from `/entries/stale`, root `shouldRevalidate` always true so it clears after logging), dashboard (OTJ total, light counts, KSB grid filterable by category/light, recent entries), `entries._index` (filter q/from/to, grouped by day, chain members indented under root), `entries.new`, `entries.$id` (view, edit via same form, delete, per-KSB best star, chain strip, evidence list + upload), `ksbs.$code` (stats, best entries, entries, evidence + upload). Components: `ui/index.tsx` (Button/Input/Card/Stat/Tag/LightDot…), `EntryForm`, `QualitySlider`, `EvidenceUpload` (+`EvidenceList`), `KsbCard` (+`QualityBar`), `EntryRow`, `StarBadge`, `StaleBanner`. Checked with typecheck, tests and a Playwright run of the built app (create, chain, upload, best flag, edit round-trip).
+- Stage 4 decisions:
+  - Eden client uses `parseDate: false`: otherwise Eden turns ISO strings into `Date`s, which broke `formatDate` and day grouping.
+  - Response types re-exported from `server/models` in `app/lib/api.ts`; `errorMessage()` turns Eden errors into text. The frontend imports `server/services/star.ts` directly (pure module) for STAR keys and `suggestStar`.
+  - Form KSB lines: one line = comma/space/`/`/`&` separated codes sharing one explanation. On edit, rows with identical explanations collapse back into one line. Unknown or repeated codes are caught client-side too.
+  - Stale banner shows at >= 7 days (`STALE_AFTER_DAYS` in `StaleBanner.tsx`) or when there are no entries. Suggest STAR only adds ticks, never clears.
+  - Card colours: light dot + tinted border (green/yellow); untouched = grey. Accent only on outlines/active state.
 - Stage 3 done: routes `entries` (list/get/create/patch/delete, `/otj`, `/stale`, `PUT /:id/ksbs/:code/best`), `ksbs` (`/`, `/stats`, `/:code` detail), `evidence` (multipart upload, `/:id`, `/:id/file`, patch quality/best, delete), `search` (entries + evidence). Logic in `services/{entries,evidence,search,ksbs}.ts`, storage in `storage/uploads.ts`. Tests: `tests/api.test.ts` (59 pass total), typecheck clean.
 - Stage 3 decisions:
   - Schemas live in `server/models.ts` (not under routes) so services can share the types. Services throw `HttpError` (`lib/errors.ts`), which `onError` maps to `{ error }` JSON (400/404); Elysia's own validation stays 422.
