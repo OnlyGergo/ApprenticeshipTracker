@@ -6,8 +6,12 @@ import { env } from "./env";
 import { HttpError } from "./lib/errors";
 import { entryRoutes } from "./routes/entries";
 import { evidenceRoutes } from "./routes/evidence";
+import { exportRoutes } from "./routes/export";
+import { importRoutes } from "./routes/import";
 import { ksbRoutes } from "./routes/ksbs";
+import { reportRoutes } from "./routes/reports";
 import { searchRoutes } from "./routes/search";
+import { settingsRoutes } from "./routes/settings";
 
 const CLIENT_DIR = join(import.meta.dir, "..", "build", "client");
 
@@ -16,7 +20,11 @@ const api = new Elysia({ prefix: "/api" })
   .use(entryRoutes)
   .use(ksbRoutes)
   .use(evidenceRoutes)
-  .use(searchRoutes);
+  .use(searchRoutes)
+  .use(reportRoutes)
+  .use(settingsRoutes)
+  .use(importRoutes)
+  .use(exportRoutes);
 
 /** Serve the built SPA; unknown paths fall back to index.html for client-side routing. */
 async function serveClient(pathname: string): Promise<Response> {
@@ -48,6 +56,7 @@ if (import.meta.main) {
   env.authUser; // fail fast if auth isn't configured
   env.authPassHash;
   await migrate();
-  app.listen(env.port);
+  // Raised from Bun's 128 MB default so a backup with lots of uploads can be restored.
+  app.listen({ port: env.port, maxRequestBodySize: 1024 * 1024 * 1024 });
   console.log(`KSB Tracker on http://localhost:${env.port}`);
 }

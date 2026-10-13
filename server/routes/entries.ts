@@ -3,6 +3,7 @@ import { getDb } from "../db/client";
 import { EntryDetail, EntryFilters, EntryInput, EntryPatch, EntrySummary, IsoDate, OtjSummary, Stale } from "../models";
 import { createEntry, deleteEntry, getEntry, otjSummary, setEntryKsbBest, updateEntry } from "../services/entries";
 import { searchEntries } from "../services/search";
+import { getSettings } from "../services/settings";
 import { staleness } from "../services/stats";
 
 const Id = t.Object({ id: t.Numeric({ minimum: 1 }) });
@@ -16,7 +17,7 @@ export const entryRoutes = new Elysia({ prefix: "/entries" })
     query: t.Object({ from: t.Optional(IsoDate), to: t.Optional(IsoDate) }),
     response: OtjSummary,
   })
-  .get("/stale", () => staleness(getDb()), { response: Stale })
+  .get("/stale", () => ({ ...staleness(getDb()), stale_after_days: getSettings(getDb()).stale_after_days }), { response: Stale })
   .post("/", ({ body, set }) => ((set.status = 201), createEntry(getDb(), body)), { body: EntryInput, response: { 201: EntryDetail } })
   .get("/:id", ({ params }) => getEntry(getDb(), params.id), { params: Id, response: EntryDetail })
   .patch("/:id", ({ params, body }) => updateEntry(getDb(), params.id, body), { params: Id, body: EntryPatch, response: EntryDetail })

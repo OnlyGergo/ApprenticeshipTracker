@@ -1,4 +1,4 @@
-import { Links, Meta, NavLink, Outlet, Scripts, ScrollRestoration } from "react-router";
+import { Link, Links, Meta, NavLink, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
 import type { Route } from "./+types/root";
 import { StaleBanner } from "~/components/StaleBanner";
 import { api } from "~/lib/api";
@@ -14,8 +14,11 @@ export const shouldRevalidate = () => true;
 
 const NAV = [
   { to: "/", label: "Dashboard", end: true },
-  { to: "/entries", label: "Entries", end: true },
-  { to: "/entries/new", label: "New entry", end: true },
+  { to: "/entries", label: "Entries", end: false },
+  { to: "/coverage", label: "Coverage", end: true },
+  { to: "/gaps", label: "Gaps", end: true },
+  { to: "/import", label: "Import", end: true },
+  { to: "/settings", label: "Settings", end: true },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -39,26 +42,42 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App({ loaderData }: Route.ComponentProps) {
   const { stale } = loaderData;
+  const { pathname } = useLocation();
   return (
     <div className="min-h-screen">
-      <header className="flex items-center gap-4 border-b border-border bg-surface px-4 py-2">
-        <span className="font-semibold tracking-tight">KSB Tracker</span>
-        <nav className="flex gap-1 text-muted">
-          {NAV.map((n) => (
-            <NavLink
-              key={n.to}
-              to={n.to}
-              end={n.end}
-              className={({ isActive }) =>
-                `rounded-ui border px-2 py-1 ${isActive ? "border-accent bg-accent/15 text-text" : "border-transparent hover:border-accent-muted hover:text-text"}`
-              }
-            >
-              {n.label}
-            </NavLink>
-          ))}
-        </nav>
+      <header className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur">
+        <div className="mx-auto flex h-11 max-w-6xl items-stretch gap-3 px-4 sm:gap-6">
+          <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold tracking-tight">
+            <span className="size-2.5 rounded-[2px] border border-accent" aria-hidden />
+            KSB Tracker
+          </Link>
+          <nav className="-mb-px flex min-w-0 items-stretch gap-4 overflow-x-auto text-muted">
+            {NAV.map((n) => (
+              <NavLink
+                key={n.to}
+                to={n.to}
+                end={n.end}
+                className={({ isActive }) => {
+                  // "Log entry" has its own button, so /entries/new doesn't light up Entries.
+                  const active = isActive && pathname !== "/entries/new";
+                  return `flex items-center whitespace-nowrap border-b-2 transition-colors ${active ? "border-accent text-text" : "border-transparent hover:text-text"}`;
+                }}
+              >
+                {n.label}
+              </NavLink>
+            ))}
+          </nav>
+          <NavLink
+            to="/entries/new"
+            className={({ isActive }) =>
+              `my-auto ml-auto shrink-0 rounded-ui border px-2.5 py-0.5 text-sm transition-colors ${isActive ? "border-accent bg-accent/15" : "border-accent-muted hover:border-accent"}`
+            }
+          >
+            + Log entry
+          </NavLink>
+        </div>
       </header>
-      {stale && <StaleBanner lastEntryDate={stale.last_entry_date} daysSince={stale.days_since} />}
+      {stale && <StaleBanner lastEntryDate={stale.last_entry_date} daysSince={stale.days_since} after={stale.stale_after_days} />}
       <main className="mx-auto max-w-6xl p-4">
         <Outlet />
       </main>

@@ -9,6 +9,9 @@ const migrations: Array<(db: Database) => Promise<void> | void> = [
   },
 ];
 
+/** Schema version this build migrates to. */
+export const SCHEMA_VERSION = migrations.length;
+
 export async function migrate(db: Database = getDb()): Promise<number> {
   const current = db.query<{ user_version: number }, []>("PRAGMA user_version").get()?.user_version ?? 0;
   for (let v = current; v < migrations.length; v++) {

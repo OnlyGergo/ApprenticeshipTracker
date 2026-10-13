@@ -33,4 +33,20 @@ Everything the server serves is behind HTTP Basic Auth. In dev, only `/api` (pro
 
 ## Data
 
-`DATA_DIR` (default `./data`, gitignored) holds `app.db` (SQLite, WAL mode) and `uploads/`. To back up, copy that folder; zip backup/restore is coming in stage 5.
+`DATA_DIR` (default `./data`, gitignored) holds `app.db` (SQLite, WAL mode) and `uploads/`. To back up, use **Settings → Download backup**: one zip with a consistent DB snapshot and every upload. **Restore** replaces everything and keeps the previous state once as `app.db.pre-restore` and `uploads.pre-restore` in `DATA_DIR`.
+
+## Importing old logs
+
+**Import** takes a CSV (one entry per row) or pasted text. In a CSV, the log text cell holds the description, then one line per KSB or KSB group:
+
+```
+I did a thing, it went well, I developed the skills:
+K1, B1 - I tried hard
+S1 - I need to improve how I did X but I achieved this by doing yz
+```
+
+Date, start, end, duration and text columns are guessed from the headers and can be re-mapped in the preview. Dates are read UK-style (`13/10/2026`); with only a duration column, entries start at 09:00. Rows with errors (unknown KSB codes, no date/time) aren't imported until fixed, and rows already imported are flagged as duplicates and unticked. The import runs in one transaction, earliest first, so same-day chaining matches entering them by hand.
+
+## Coverage and gaps
+
+Set the apprenticeship start date, EPA gateway date and OTJ target in **Settings**. **Coverage** plots cumulative OTJ hours against a straight target line (start → gateway) and KSBs touched against the total. **Gaps** lists every red/yellow KSB with the reason it isn't green, and can be copied as text.

@@ -111,13 +111,21 @@ Do one per session/usage window. Tick off when done.
 - [x] **2 Core logic + tests**: `text.ts`, `parser.ts`, `chaining.ts`, `stats.ts`, `star.ts`. Done when tests pass.
 - [x] **3 API routes**: entries (CRUD + chaining), ksbs (+stats), evidence/uploads (quality, best flag), search.
 - [x] **4 Frontend core**: root shell + dark/orange theme, dashboard, entry form, entry view, KSB detail, stale banner.
-- [ ] **5 Extras**: coverage chart, gaps, import (paste -> parse preview), settings, then reports API and zip backup/restore (last, most fiddly).
+- [x] **5 Extras**: coverage chart, gaps, import (paste -> parse preview), settings, then reports API and zip backup/restore (last, most fiddly).
 
 ## Status
 
 _Update at the end of every stage: what's done, what's half-done, decisions made, known issues, exact next step._
 
-- Stage: 4 done (2026-10-13). Next: stage 5 (extras).
+- Stage: 5 done (2026-10-13). All stages complete. Next: fill in the real ST0119 KSB list (`server/db/ksbs.json`), then feedback-driven fixes.
+- Stage 5 done: API `reports` (`/coverage`, `/gaps`), `settings` (GET/PATCH), `import` (`/preview` for csv|text, `/commit`), `export` (`/backup` zip download, `/restore` multipart). Services `settings.ts`, `reports.ts`, `importer.ts`, `backup.ts`; `lib/csv.ts` (RFC 4180, delimiter sniffing), `lib/zip.ts` (fflate). Pages `coverage` (+`CoverageChart`, dependency-free SVG with crosshair tooltip and table view), `gaps`, `import`, `settings`. Navbar redesigned as text links with an accent underline for the active page and a single "+ Log entry" button. Tests: `tests/extras.test.ts` (75 pass total), typecheck clean, Playwright run of the built app (CSV import, coverage, gaps, backup download + restore).
+- Stage 5 decisions:
+  - Import source is a CSV export, one entry per row, log text in one cell (description, then `K1, B1 - explanation` lines, parsed with `parseLog`). Columns guessed from headers (date/start/end/duration/text, text falls back to the longest column), overridable in the preview. UK dates first; times accept `9am`, `9.00`, date-time cells. Duration only -> start 09:00. Rows with unknown KSB codes or missing date/times are errors (unticked, not imported) rather than silently dropping data; exact date+times+text matches are flagged duplicate. Date/time fields are editable in the preview. Commit is one transaction, sorted by date/start so the earliest same-day entry becomes the chain root.
+  - Settings keys: `start_date`, `gateway_date`, `target_hours`, `stale_after_days` (default 7; `/entries/stale` now returns it and the banner uses it instead of a constant).
+  - Coverage: weekly points from start (setting, else first entry) to gateway (if future) or today; target is linear from `start_date` to `gateway_date`; future points have null actuals. "KSBs touched" = first date any entry or KSB-attached file hit it. Two separate charts (hours vs target, KSBs vs total) rather than a dual axis.
+  - Gap reasons derive from the stats thresholds (`gapReasons`), plus a "no best-evidence pick" nudge.
+  - Backup: `VACUUM INTO` snapshot (safe under WAL) + `uploads/**` + a manifest. Restore validates the zip paths, schema version, required tables and integrity before swapping; closes the shared DB, keeps one `.pre-restore` generation, reopens and migrates. Server `maxRequestBodySize` raised to 1 GB for restores.
+  - Not built: a dedicated `search` page. The API supports KSB/quality/best filters (`GET /entries`, `GET /search`) but the entries list UI only exposes text + date range. Good candidate for the next session.
 - Stage 4 done: root shell (nav + stale banner from `/entries/stale`, root `shouldRevalidate` always true so it clears after logging), dashboard (OTJ total, light counts, KSB grid filterable by category/light, recent entries), `entries._index` (filter q/from/to, grouped by day, chain members indented under root), `entries.new`, `entries.$id` (view, edit via same form, delete, per-KSB best star, chain strip, evidence list + upload), `ksbs.$code` (stats, best entries, entries, evidence + upload). Components: `ui/index.tsx` (Button/Input/Card/Stat/Tag/LightDot…), `EntryForm`, `QualitySlider`, `EvidenceUpload` (+`EvidenceList`), `KsbCard` (+`QualityBar`), `EntryRow`, `StarBadge`, `StaleBanner`. Checked with typecheck, tests and a Playwright run of the built app (create, chain, upload, best flag, edit round-trip).
 - Stage 4 decisions:
   - Eden client uses `parseDate: false`: otherwise Eden turns ISO strings into `Date`s, which broke `formatDate` and day grouping.

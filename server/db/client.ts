@@ -25,3 +25,9 @@ export function getDb(): Database {
 export function setDb(db: Database): void {
   instance = db;
 }
+
+/** Close the shared connection (checkpoints the WAL); the next getDb() reopens. Used by restore. */
+export function closeDb(): void {
+  instance?.close();
+  instance = undefined;
+}

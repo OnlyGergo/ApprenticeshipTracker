@@ -102,7 +102,72 @@ export const OtjSummary = t.Object({
   total_minutes: t.Number(),
 });
 
-export const Stale = t.Object({ last_entry_date: t.Nullable(t.String()), days_since: t.Nullable(t.Number()) });
+export const Stale = t.Object({
+  last_entry_date: t.Nullable(t.String()),
+  days_since: t.Nullable(t.Number()),
+  stale_after_days: t.Number(),
+});
+
+export const Settings = t.Object({
+  start_date: t.Nullable(IsoDate), // apprenticeship start, anchors the target line
+  gateway_date: t.Nullable(IsoDate), // EPA gateway, where the target line ends
+  target_hours: t.Nullable(t.Number({ minimum: 0 })), // OTJ hours needed by the gateway
+  stale_after_days: t.Integer({ minimum: 1, maximum: 365 }),
+});
+export const SettingsPatch = t.Partial(Settings);
+
+export const CoverageReport = t.Object({
+  points: t.Array(
+    t.Object({
+      date: t.String(),
+      hours: t.Nullable(t.Number()),
+      ksbs: t.Nullable(t.Number()),
+      target_hours: t.Nullable(t.Number()),
+    }),
+  ),
+  ksb_total: t.Number(),
+  total_hours: t.Number(),
+  target_hours: t.Nullable(t.Number()),
+  target_to_date: t.Nullable(t.Number()),
+  start_date: t.Nullable(t.String()),
+  gateway_date: t.Nullable(t.String()),
+});
+
+export const GapReport = t.Object({
+  today: t.String(),
+  gateway_date: t.Nullable(t.String()),
+  days_to_gateway: t.Nullable(t.Number()),
+  total: t.Number(),
+  red: t.Number(),
+  yellow: t.Number(),
+  green: t.Number(),
+  items: t.Array(t.Object({ ...KsbStats.properties, reasons: t.Array(t.String()) })),
+});
+
+const ColumnIndex = t.Nullable(t.Integer({ minimum: 0 }));
+export const ImportColumns = t.Object({
+  date: ColumnIndex,
+  start: ColumnIndex,
+  end: ColumnIndex,
+  duration: ColumnIndex,
+  text: ColumnIndex,
+});
+export const ImportRow = t.Object({
+  row: t.Number(), // CSV line number (header = 1), or block number for a paste
+  date: t.Nullable(t.String()),
+  start_time: t.Nullable(t.String()),
+  end_time: t.Nullable(t.String()),
+  text: t.String(),
+  ksbs: t.Array(t.Object({ code: t.String(), explanation: t.String() })),
+  warnings: t.Array(t.String()),
+  errors: t.Array(t.String()), // row can't be imported until these are fixed
+  duplicate: t.Boolean(), // same date/times/text already exists (or appears earlier in this file)
+});
+export const ImportPreview = t.Object({
+  headers: t.Array(t.String()),
+  columns: ImportColumns,
+  rows: t.Array(ImportRow),
+});
 
 /** Shared by GET /entries and GET /search. */
 export const EntryFilters = t.Object({
@@ -122,4 +187,7 @@ export type EntryPatchT = typeof EntryPatch.static;
 export type EntrySummaryT = typeof EntrySummary.static;
 export type EntryDetailT = typeof EntryDetail.static;
 export type EvidenceFileT = typeof EvidenceFile.static;
+export type SettingsT = typeof Settings.static;
+export type ImportColumnsT = typeof ImportColumns.static;
+export type ImportRowT = typeof ImportRow.static;
 export type EntryFiltersT = typeof EntryFilters.static;

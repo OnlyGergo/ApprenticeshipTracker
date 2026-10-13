@@ -19,6 +19,9 @@ import type { KsbStats as KsbStatsSchema, Ksb as KsbSchema, KsbDetail as KsbDeta
 export type KsbStats = typeof KsbStatsSchema.static;
 export type Ksb = typeof KsbSchema.static;
 export type KsbDetail = typeof KsbDetailSchema.static;
+import type { ImportPreview as ImportPreviewSchema } from "../../server/models";
+export type ImportPreview = typeof ImportPreviewSchema.static;
+export type { ImportColumnsT as ImportColumns, ImportRowT as ImportRow } from "../../server/models";
 
 /** Eden error -> readable message (service errors are `{ error }`, validation is Elysia's 422 body). */
 export function errorMessage(error: { status: unknown; value: unknown } | null | undefined): string {
