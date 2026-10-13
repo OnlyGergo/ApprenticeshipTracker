@@ -18,7 +18,10 @@ export const env = {
     }
     return hash;
   },
-  dataDir: resolve(Bun.env.DATA_DIR ?? "./data"),
+  // Getter so tests can point DATA_DIR at a temp dir after import.
+  get dataDir() {
+    return resolve(Bun.env.DATA_DIR ?? "./data");
+  },
   port: Number(Bun.env.PORT ?? 3000),
   isProd: Bun.env.NODE_ENV === "production",
 };

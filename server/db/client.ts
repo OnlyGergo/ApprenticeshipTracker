@@ -20,3 +20,8 @@ export function getDb(): Database {
   instance ??= openDb();
   return instance;
 }
+
+/** Swap the shared connection (tests use an in-memory db). */
+export function setDb(db: Database): void {
+  instance = db;
+}

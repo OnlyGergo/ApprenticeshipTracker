@@ -109,7 +109,7 @@ Do one per session/usage window. Tick off when done.
 
 - [x] **1 Foundation**: scaffold, tsconfig/bunfig/vite/RR config, `schema.sql`, migrate, `seed-ksbs`, auth, Elysia skeleton (exports `App` type) + static fallback, README. Done when it boots and `/` is auth-gated.
 - [x] **2 Core logic + tests**: `text.ts`, `parser.ts`, `chaining.ts`, `stats.ts`, `star.ts`. Done when tests pass.
-- [ ] **3 API routes**: entries (CRUD + chaining), ksbs (+stats), evidence/uploads (quality, best flag), search.
+- [x] **3 API routes**: entries (CRUD + chaining), ksbs (+stats), evidence/uploads (quality, best flag), search.
 - [ ] **4 Frontend core**: root shell + dark/orange theme, dashboard, entry form, entry view, KSB detail, stale banner.
 - [ ] **5 Extras**: coverage chart, gaps, import (paste -> parse preview), settings, then reports API and zip backup/restore (last, most fiddly).
 
@@ -117,7 +117,16 @@ Do one per session/usage window. Tick off when done.
 
 _Update at the end of every stage: what's done, what's half-done, decisions made, known issues, exact next step._
 
-- Stage: 2 done (2026-10-13). Next: stage 3 (API routes).
+- Stage: 3 done (2026-10-13). Next: stage 4 (frontend core).
+- Stage 3 done: routes `entries` (list/get/create/patch/delete, `/otj`, `/stale`, `PUT /:id/ksbs/:code/best`), `ksbs` (`/`, `/stats`, `/:code` detail), `evidence` (multipart upload, `/:id`, `/:id/file`, patch quality/best, delete), `search` (entries + evidence). Logic in `services/{entries,evidence,search,ksbs}.ts`, storage in `storage/uploads.ts`. Tests: `tests/api.test.ts` (59 pass total), typecheck clean.
+- Stage 3 decisions:
+  - Schemas live in `server/models.ts` (not under routes) so services can share the types. Services throw `HttpError` (`lib/errors.ts`), which `onError` maps to `{ error }` JSON (400/404); Elysia's own validation stays 422.
+  - Chaining on edit: re-chains when the date or text changes, but a root with members keeps its place on a text-only edit. Deleting a root, or moving it to another day, first promotes its lowest-index member to root (rather than relying on ON DELETE SET NULL, which would split the chain and double-show the text).
+  - Entry KSBs: PATCH `ksbs` replaces the whole list; best flags not given are kept. Unknown or duplicate codes are a 400.
+  - Uploads: `uploads/{ksb_id}/` when a KSB is given, else `uploads/entries/{entry_id}/`; file name `{8-char uuid}-{sanitised name}`; 50 MB cap. Served with `nosniff` + CSP sandbox; only images/PDF/plain text inline, everything else downloads.
+  - Filters (`GET /entries`, `GET /search`): `q` (entry text or explanation; file name for evidence), `ksb`, `from`/`to`, `quality_min`/`quality_max` (entries need an attached file in range), `best`, `limit` (default 200)/`offset`. Evidence dates use the entry's date, else the upload date.
+  - `env.dataDir` is now a getter and `db/client.ts` has `setDb()`, both so tests can use a temp dir and in-memory DB.
+  - Not done here (stage 5): parse/import endpoint, settings, reports, zip export.
 - Stage 2 done: `server/lib/text.ts` (tokenize/stopwords/bigram shingles/jaccard), `services/parser.ts`, `services/chaining.ts`, `services/stats.ts`, `services/star.ts`. Tests: `tests/{parser,chaining,stats}.test.ts` (43 pass with boot), typecheck clean.
 - Stage 2 decisions:
   - Parser: optional first-line header (`2026-10-13 09:00-12:30` or `13/10/2026 9.00 – 17:15`, weekday allowed) fills date/times. Description = lines before the first KSB line. KSB line = optional bullet, codes joined by `,` `/` `&` `and`, then `:` `-` `–` `—`. Follow-on lines append to the previous KSB group; blank line ends that. Duplicate codes merge with a warning. `parseLogs` splits a paste on `---` lines. Returns `warnings[]` for the import preview instead of throwing.
