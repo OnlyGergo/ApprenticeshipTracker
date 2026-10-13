@@ -82,8 +82,11 @@ Simple banner/flag showing days since the last log entry.
 Here is an idea of the file path. this isn't set in stone
 
 Could you also use subagents to implement things efficiently like so: sonnet as developer, haiku as very capable intern. you, opus, are the architect and manager
-Create and maintain a Claude.md, and a readme.md, in above example, haiku can do that.
+Maintain a Claude.md, and a readme.md, in above example, haiku can do that.
+The exact database schemas and snippets are ideas, not set specifications. when implementing feel free to add or rearrange if it's more efficient or flexible
 
+The type of file structure I'd like not set in stone:
+```
 ksb-tracker/
 ├── package.json
 ├── bunfig.toml
@@ -106,7 +109,7 @@ ksb-tracker/
 │   │   ├── evidence.ts      # multipart upload, quality (1-5), best-evidence flag
 │   │   ├── search.ts        # filter by KSB / date / quality
 │   │   ├── reports.ts       # gap report, coverage-over-time, stale-entry check
-│   │   └── export.ts        # PDF per KSB, zip backup/restore
+│   │   └── export.ts        #  zip backup/restore
 │   ├── services/
 │   │   ├── parser.ts        # fixed-format log parser (description + KSB lines)
 │   │   ├── chaining.ts      # same-day Jaccard shingle similarity (>=0.8)
@@ -154,5 +157,6 @@ ksb-tracker/
 └── tests/
     ├── parser.test.ts
     └── chaining.test.ts
+```
 
 Thanks
