@@ -1,6 +1,6 @@
 # KSB Tracker — Tech Spec
 
-Personal tool for logging DTS apprenticeship OTJ (off-the-job) entries and tracking evidence against KSBs, replacing manual copy-paste into OneAdvanced.
+Personal tool for logging DTS apprenticeship OTJ (off-the-job) entries and tracking evidence against KSBs, supplementing  OneAdvanced.
 
 ## Stack
 
@@ -73,13 +73,10 @@ Lightweight per-entry flag for whether it captures Situation/Task/Action/Result.
 **10. Search/filter**
 Across entries by KSB, date range, and quality score.
 
-**11. PDF export per KSB**
-Formatted export of entries + linked evidence for portfolio submission.
-
-**12. "Best evidence" flag**
+**11. "Best evidence" flag**
 Mark specific entries as top pick per KSB, independent of the quality score — speeds up professional-discussion prep.
 
-**13. Stale-entry reminder**
+**12. Stale-entry reminder**
 Simple banner/flag showing days since the last log entry.
 
 Here is an idea of the file path. this isn't set in stone
