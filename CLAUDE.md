@@ -108,7 +108,7 @@ Fintech/professional (Revolut-style), dark mode, orange accent.
 Do one per session/usage window. Tick off when done.
 
 - [x] **1 Foundation**: scaffold, tsconfig/bunfig/vite/RR config, `schema.sql`, migrate, `seed-ksbs`, auth, Elysia skeleton (exports `App` type) + static fallback, README. Done when it boots and `/` is auth-gated.
-- [ ] **2 Core logic + tests**: `text.ts`, `parser.ts`, `chaining.ts`, `stats.ts`, `star.ts`. Done when tests pass.
+- [x] **2 Core logic + tests**: `text.ts`, `parser.ts`, `chaining.ts`, `stats.ts`, `star.ts`. Done when tests pass.
 - [ ] **3 API routes**: entries (CRUD + chaining), ksbs (+stats), evidence/uploads (quality, best flag), search.
 - [ ] **4 Frontend core**: root shell + dark/orange theme, dashboard, entry form, entry view, KSB detail, stale banner.
 - [ ] **5 Extras**: coverage chart, gaps, import (paste -> parse preview), settings, then reports API and zip backup/restore (last, most fiddly).
@@ -117,9 +117,16 @@ Do one per session/usage window. Tick off when done.
 
 _Update at the end of every stage: what's done, what's half-done, decisions made, known issues, exact next step._
 
-- Stage: 1 done (2026-10-13). Next: stage 2 (core logic + tests).
-- Done: Bun scaffold, tsconfig/bunfig/vite/react-router config, `schema.sql` (v1), `migrate.ts` (PRAGMA user_version, runs on server start), `seed-ksbs.ts` (upsert by code from `server/db/ksbs.json`), Basic Auth gating all requests (`onRequest`), Elysia app exporting `App`, `/api/health`, `/api/ksbs` list, SPA static fallback from `build/client`, Eden client `app/lib/api.ts`, `app/lib/format.ts`, root shell + placeholder dashboard, `style.css` tokens, README, `tests/boot.test.ts` (auth gate, migrate, seed).
-- Decisions:
+- Stage: 2 done (2026-10-13). Next: stage 3 (API routes).
+- Stage 2 done: `server/lib/text.ts` (tokenize/stopwords/bigram shingles/jaccard), `services/parser.ts`, `services/chaining.ts`, `services/stats.ts`, `services/star.ts`. Tests: `tests/{parser,chaining,stats}.test.ts` (43 pass with boot), typecheck clean.
+- Stage 2 decisions:
+  - Parser: optional first-line header (`2026-10-13 09:00-12:30` or `13/10/2026 9.00 – 17:15`, weekday allowed) fills date/times. Description = lines before the first KSB line. KSB line = optional bullet, codes joined by `,` `/` `&` `and`, then `:` `-` `–` `—`. Follow-on lines append to the previous KSB group; blank line ends that. Duplicate codes merge with a warning. `parseLogs` splits a paste on `---` lines. Returns `warnings[]` for the import preview instead of throwing.
+  - Chaining: new entry is compared to every same-day entry (roots and members); best score >= 0.80 joins that chain at max index + 1, ties go to the lowest root id. Single-word texts fall back to unigrams; empty vs empty scores 0. Orphans (root deleted, `chain_root_id` set NULL) act as their own root. `chainForEntry(db, date, text, excludeId)` is the DB wrapper for stage 3. `summariseOtj` falls back to the lowest-index member's text if the root isn't in the set.
+  - Traffic light: red = untouched; green = >=1 quality 1-2 file AND >=2 touches (entries + files); yellow = everything else (entries only, only 3-5 files, lone strong file). Thresholds are exported constants. Entry count = distinct chains. A file counts for a KSB if attached directly or via a tagged entry, deduped. `last_touched` = max(entry date, upload date). `has_best_evidence` checks both `entry_ksbs.best_evidence` and file flags.
+  - Stale check: `staleness(db, today)` uses MAX(entries.date), with today in Europe/London.
+  - STAR: row<->flags helpers, score/missing, and `suggestStar` keyword regexes to pre-tick the form (suggestions only).
+- Stage 1 done: Bun scaffold, tsconfig/bunfig/vite/react-router config, `schema.sql` (v1), `migrate.ts` (PRAGMA user_version, runs on server start), `seed-ksbs.ts` (upsert by code from `server/db/ksbs.json`), Basic Auth gating all requests (`onRequest`), Elysia app exporting `App`, `/api/health`, `/api/ksbs` list, SPA static fallback from `build/client`, Eden client `app/lib/api.ts`, `app/lib/format.ts`, root shell + placeholder dashboard, `style.css` tokens, README, `tests/boot.test.ts` (auth gate, migrate, seed).
+- Stage 1 decisions:
   - React Router v7 (7.18) pinned per this file, even though v8 is out. TypeScript 6 (RR7 peer range). `isbot` was auto-added by RR.
   - SPA mode (`ssr: false`): Elysia serves `build/client` and falls back to `index.html`. Dev: `bun run dev` (API) + `bun run dev:web` (Vite, proxies `/api`). Vite pages aren't auth-gated in dev, only in prod.
   - Extra columns beyond the data model: `ksbs.sort_order` (K2 before K10), `entry_ksbs.best_evidence` (feature 11 "top pick entry per KSB"), `evidence_files.original_name`, `entries.created_at/updated_at`, a `settings` key/value table (target hours, gateway date). `evidence_files.path` is relative to DATA_DIR. CHECK `end_time > start_time` (no overnight entries).
