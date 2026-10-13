@@ -107,7 +107,7 @@ Fintech/professional (Revolut-style), dark mode, orange accent.
 
 Do one per session/usage window. Tick off when done.
 
-- [ ] **1 Foundation**: scaffold, tsconfig/bunfig/vite/RR config, `schema.sql`, migrate, `seed-ksbs`, auth, Elysia skeleton (exports `App` type) + static fallback, README. Done when it boots and `/` is auth-gated.
+- [x] **1 Foundation**: scaffold, tsconfig/bunfig/vite/RR config, `schema.sql`, migrate, `seed-ksbs`, auth, Elysia skeleton (exports `App` type) + static fallback, README. Done when it boots and `/` is auth-gated.
 - [ ] **2 Core logic + tests**: `text.ts`, `parser.ts`, `chaining.ts`, `stats.ts`, `star.ts`. Done when tests pass.
 - [ ] **3 API routes**: entries (CRUD + chaining), ksbs (+stats), evidence/uploads (quality, best flag), search.
 - [ ] **4 Frontend core**: root shell + dark/orange theme, dashboard, entry form, entry view, KSB detail, stale banner.
@@ -117,6 +117,12 @@ Do one per session/usage window. Tick off when done.
 
 _Update at the end of every stage: what's done, what's half-done, decisions made, known issues, exact next step._
 
-- Stage:
--  not started
-- Notes: none yet
+- Stage: 1 done (2026-10-13). Next: stage 2 (core logic + tests).
+- Done: Bun scaffold, tsconfig/bunfig/vite/react-router config, `schema.sql` (v1), `migrate.ts` (PRAGMA user_version, runs on server start), `seed-ksbs.ts` (upsert by code from `server/db/ksbs.json`), Basic Auth gating all requests (`onRequest`), Elysia app exporting `App`, `/api/health`, `/api/ksbs` list, SPA static fallback from `build/client`, Eden client `app/lib/api.ts`, `app/lib/format.ts`, root shell + placeholder dashboard, `style.css` tokens, README, `tests/boot.test.ts` (auth gate, migrate, seed).
+- Decisions:
+  - React Router v7 (7.18) pinned per this file, even though v8 is out. TypeScript 6 (RR7 peer range). `isbot` was auto-added by RR.
+  - SPA mode (`ssr: false`): Elysia serves `build/client` and falls back to `index.html`. Dev: `bun run dev` (API) + `bun run dev:web` (Vite, proxies `/api`). Vite pages aren't auth-gated in dev, only in prod.
+  - Extra columns beyond the data model: `ksbs.sort_order` (K2 before K10), `entry_ksbs.best_evidence` (feature 11 "top pick entry per KSB"), `evidence_files.original_name`, `entries.created_at/updated_at`, a `settings` key/value table (target hours, gateway date). `evidence_files.path` is relative to DATA_DIR. CHECK `end_time > start_time` (no overnight entries).
+  - Auth caches already-verified headers in memory so argon2 doesn't run on every asset request.
+  - `server/env.ts` added for typed env access. `scripts/hash-password.ts` prints a `\$`-escaped `.env` line (Bun's `.env` expands `$`).
+- Known issues: `server/db/ksbs.json` has only 3 PLACEHOLDER KSBs. The official ST0119 list couldn't be fetched (IfATE site not reachable from the build container) and needs filling in. RR prints a harmless "`envFile` is deprecated" warning.
