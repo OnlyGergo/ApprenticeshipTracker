@@ -1,7 +1,7 @@
 import { treaty } from "@elysiajs/eden";
 import type { App } from "../../server/index";
 
-// Same-origin: the browser re-sends the cached Basic Auth credentials automatically.
+// Same-origin: the browser sends the session cookie automatically.
 // parseDate off: Eden would otherwise turn ISO strings into Date objects, but the schemas
 // (and format.ts) treat dates as strings.
 export const api = treaty<App>(typeof window === "undefined" ? "http://localhost:3000" : window.location.origin, {

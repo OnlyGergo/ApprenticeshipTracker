@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { signIn } from "./helpers";
 
 const PASS = "test-pass";
 process.env.BASIC_AUTH_USER = "tester";
@@ -14,10 +15,10 @@ const { openDb, setDb } = await import("../server/db/client");
 const { migrate } = await import("../server/db/migrate");
 const { seedKsbs, validateSeed } = await import("../server/db/seed-ksbs");
 
-const auth = `Basic ${Buffer.from(`tester:${PASS}`).toString("base64")}`;
+const auth = await signIn(app, PASS);
 
 async function call(method: string, path: string, body?: unknown) {
-  const init: RequestInit = { method, headers: { authorization: auth } };
+  const init: RequestInit = { method, headers: { cookie: auth } };
   if (body instanceof FormData) init.body = body;
   else if (body !== undefined) {
     init.body = JSON.stringify(body);

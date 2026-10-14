@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { signIn } from "./helpers";
 import { parseCsv } from "../server/lib/csv";
 import { detectColumns, parseDateCell, parseDuration, parseTimeCell } from "../server/services/importer";
 
@@ -18,10 +19,10 @@ const { seedKsbs, validateSeed } = await import("../server/db/seed-ksbs");
 const { coverage } = await import("../server/services/reports");
 const { updateSettings } = await import("../server/services/settings");
 
-const auth = `Basic ${Buffer.from(`tester:${PASS}`).toString("base64")}`;
+const auth = await signIn(app, PASS);
 
 async function call(method: string, path: string, body?: unknown) {
-  const init: RequestInit = { method, headers: { authorization: auth } };
+  const init: RequestInit = { method, headers: { cookie: auth } };
   if (body instanceof FormData) init.body = body;
   else if (body !== undefined) {
     init.body = JSON.stringify(body);
@@ -233,7 +234,7 @@ describe("backup + restore", () => {
 
     const ev = (await call("GET", "/ksbs/S2")).json.evidence;
     expect(ev).toHaveLength(1);
-    const file = await app.handle(new Request(`http://localhost${ev[0].url}`, { headers: { authorization: auth } }));
+    const file = await app.handle(new Request(`http://localhost${ev[0].url}`, { headers: { cookie: auth } }));
     expect(await file.text()).toBe("hello evidence");
     expect(existsSync(join(dataDir, "uploads.pre-restore"))).toBe(true);
   });

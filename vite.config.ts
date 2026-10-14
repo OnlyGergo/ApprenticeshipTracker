@@ -9,7 +9,7 @@ export default defineConfig({
   resolve: { alias: { "~": "/app" } },
   server: {
     port: 5173,
-    // Dev only: forward API calls to the Elysia server (which enforces Basic Auth).
+    // Dev only: forward API calls to the Elysia server (which enforces the session check).
     proxy: { "/api": `http://localhost:${apiPort}` },
   },
 });

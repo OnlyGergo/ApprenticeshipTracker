@@ -1,9 +1,10 @@
 import { Elysia } from "elysia";
 import { join, normalize } from "node:path";
-import { isAuthorised, unauthorised } from "./auth";
+import { isAuthenticated } from "./auth";
 import { migrate } from "./db/migrate";
 import { env } from "./env";
 import { HttpError } from "./lib/errors";
+import { authRoutes } from "./routes/auth";
 import { entryRoutes } from "./routes/entries";
 import { evidenceRoutes } from "./routes/evidence";
 import { exportRoutes } from "./routes/export";
@@ -15,8 +16,17 @@ import { settingsRoutes } from "./routes/settings";
 
 const CLIENT_DIR = join(import.meta.dir, "..", "build", "client");
 
+/** Reachable without a session: the health check, the auth endpoints, the login page and static files. */
+function isPublicPath(pathname: string): boolean {
+  if (pathname === "/login" || pathname === "/api/health" || pathname.startsWith("/api/auth/")) return true;
+  if (pathname.startsWith("/api/")) return false;
+  // Anything with a file extension (JS/CSS bundles, favicon) is static, not app data.
+  return /\.[a-z0-9]+$/i.test(pathname);
+}
+
 const api = new Elysia({ prefix: "/api" })
   .get("/health", () => ({ ok: true as const }))
+  .use(authRoutes)
   .use(entryRoutes)
   .use(ksbRoutes)
   .use(evidenceRoutes)
@@ -39,9 +49,15 @@ async function serveClient(pathname: string): Promise<Response> {
 }
 
 export const app = new Elysia()
-  // Everything (API and static) sits behind Basic Auth.
-  .onRequest(async ({ request }) => {
-    if (!(await isAuthorised(request.headers.get("authorization")))) return unauthorised();
+  // Everything except the login endpoints, the login page and static assets needs a session.
+  // API calls get a 401 JSON; page loads are sent to /login.
+  .onRequest(({ request }) => {
+    const { pathname, search } = new URL(request.url);
+    if (isPublicPath(pathname) || isAuthenticated(request.headers.get("cookie"))) return;
+    if (pathname.startsWith("/api/")) {
+      return Response.json({ error: "Not signed in" }, { status: 401 });
+    }
+    return Response.redirect(new URL(`/login?next=${encodeURIComponent(pathname + search)}`, request.url), 302);
   })
   // Service errors -> JSON { error } with their status. Elysia handles validation (422) itself.
   .onError(({ error }) => {

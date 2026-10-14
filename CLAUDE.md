@@ -23,7 +23,7 @@ Personal single-user tool for logging DTS apprenticeship OTJ (off-the-job) entri
 | API | Elysia on Bun from the start, for an end-to-end typed API (`server/index.ts`); typed client via `@elysiajs/eden` (Treaty) |
 | Frontend | Vite + React + Tailwind CSS |
 | Routing | React Router v7, framework mode (file-based, generated types) |
-| Auth | Basic Auth, single user, creds in `.env`, verified with `Bun.password.verify` |
+| Auth | Login page (`/login`) + in-memory session cookie (HttpOnly, SameSite=Strict, 30 days), single user, creds in `.env`, verified with `Bun.password.verify` |
 | Uploads | Elysia multipart body handling (`t.File` validation) |
 | Zip/export | `fflate` |
 
@@ -90,7 +90,7 @@ Layout is a guide, not fixed. Adjust if there's a good reason and note it in Sta
 
 - TypeScript strict. Bun APIs over Node equivalents where available.
 - Dates/times displayed in Europe/London (`app/lib/format.ts`); store ISO strings.
-- API returns JSON. Define request/response schemas with Elysia's `t` so types flow to the frontend; `app/lib/api.ts` is the Eden Treaty client built from the server's exported `App` type. No hand-written fetch types. All routes behind Basic Auth.
+- API returns JSON. Define request/response schemas with Elysia's `t` so types flow to the frontend; `app/lib/api.ts` is the Eden Treaty client built from the server's exported `App` type. No hand-written fetch types. All routes behind the session check (`server/index.ts` onRequest); API calls get 401 JSON, pages redirect to `/login`.
 - Keep route handlers thin; logic goes in `services/`.
 - Tests: `bun test`. Parser and chaining need tests before anything depends on them.
 - No new dependencies without a reason. Core set: elysia, @elysiajs/eden, react-router, tailwind, vite, fflate.
@@ -118,6 +118,7 @@ Do one per session/usage window. Tick off when done.
 _Update at the end of every stage: what's done, what's half-done, decisions made, known issues, exact next step._
 
 - Stage: 5 done (2026-10-13). All stages complete. Next: fill in the real ST0119 KSB list (`server/db/ksbs.json`), then feedback-driven fixes.
+- Auth change (2026-10-14, outside the staged plan): Basic Auth replaced by a real login page. `server/auth.ts` (credential check, in-memory sessions, cookie helpers), `server/routes/auth.ts` (`/api/auth/login|logout|me`), `onRequest` gate in `server/index.ts` (public: `/login`, `/api/health`, `/api/auth/*`, static files; API 401 JSON, pages 302 to `/login?next=`), `app/routes/login.tsx`, root loader checks the session and the header has a Sign out button. `.env` names unchanged (`BASIC_AUTH_USER`, `BASIC_AUTH_PASS_HASH`). Tests use `tests/helpers.ts` `signIn()`. Sessions are in memory, so a restart signs you out. No rate limiting beyond argon2's cost.
 - Stage 5 done: API `reports` (`/coverage`, `/gaps`), `settings` (GET/PATCH), `import` (`/preview` for csv|text, `/commit`), `export` (`/backup` zip download, `/restore` multipart). Services `settings.ts`, `reports.ts`, `importer.ts`, `backup.ts`; `lib/csv.ts` (RFC 4180, delimiter sniffing), `lib/zip.ts` (fflate). Pages `coverage` (+`CoverageChart`, dependency-free SVG with crosshair tooltip and table view), `gaps`, `import`, `settings`. Navbar redesigned as text links with an accent underline for the active page and a single "+ Log entry" button. Tests: `tests/extras.test.ts` (75 pass total), typecheck clean, Playwright run of the built app (CSV import, coverage, gaps, backup download + restore).
 - Stage 5 decisions:
   - Import source is a CSV export, one entry per row, log text in one cell (description, then `K1, B1 - explanation` lines, parsed with `parseLog`). Columns guessed from headers (date/start/end/duration/text, text falls back to the longest column), overridable in the preview. UK dates first; times accept `9am`, `9.00`, date-time cells. Duration only -> start 09:00. Rows with unknown KSB codes or missing date/times are errors (unticked, not imported) rather than silently dropping data; exact date+times+text matches are flagged duplicate. Date/time fields are editable in the preview. Commit is one transaction, sorted by date/start so the earliest same-day entry becomes the chain root.

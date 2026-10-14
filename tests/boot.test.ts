@@ -10,25 +10,60 @@ const { openDb } = await import("../server/db/client");
 const { migrate } = await import("../server/db/migrate");
 const { seedKsbs, sortOrder, validateSeed } = await import("../server/db/seed-ksbs");
 
-const basic = (user: string, pass: string) => `Basic ${Buffer.from(`${user}:${pass}`).toString("base64")}`;
-const get = (path: string, auth?: string) =>
-  app.handle(new Request(`http://localhost${path}`, auth ? { headers: { authorization: auth } } : {}));
+const get = (path: string, cookie?: string) =>
+  app.handle(new Request(`http://localhost${path}`, { redirect: "manual", headers: cookie ? { cookie } : {} }));
+const login = (password: string) =>
+  app.handle(
+    new Request("http://localhost/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username: "tester", password }),
+    }),
+  );
 
 describe("auth gate", () => {
-  test("/ without credentials is 401 with a Basic challenge", async () => {
-    const res = await get("/");
+  test("pages without a session redirect to /login, keeping the destination", async () => {
+    const res = await get("/entries?q=x");
+    expect(res.status).toBe(302);
+    expect(new URL(res.headers.get("location")!, "http://localhost").pathname).toBe("/login");
+    expect(res.headers.get("location")).toContain(encodeURIComponent("/entries?q=x"));
+  });
+
+  test("API calls without a session are 401 JSON", async () => {
+    const res = await get("/api/entries/stale");
     expect(res.status).toBe(401);
-    expect(res.headers.get("www-authenticate")).toContain("Basic");
+    expect(await res.json()).toEqual({ error: "Not signed in" });
   });
 
-  test("wrong password is rejected", async () => {
-    expect((await get("/api/health", basic("tester", "nope"))).status).toBe(401);
+  test("login page, health check and auth endpoints are public", async () => {
+    expect((await get("/login")).status).not.toBe(302);
+    expect((await get("/api/health")).status).toBe(200);
+    expect((await get("/api/auth/me")).status).toBe(401);
   });
 
-  test("correct credentials reach the API", async () => {
-    const res = await get("/api/health", basic("tester", PASS));
+  test("wrong password is rejected and sets no cookie", async () => {
+    const res = await login("nope");
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "Wrong username or password" });
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+
+  test("correct password sets an HttpOnly session cookie that reaches the API", async () => {
+    const res = await login(PASS);
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    const setCookie = res.headers.get("set-cookie")!;
+    expect(setCookie).toContain("HttpOnly");
+    expect(setCookie).toContain("SameSite=Strict");
+    const cookie = setCookie.split(";")[0];
+    expect((await get("/api/auth/me", cookie)).status).toBe(200);
+    expect((await get("/api/health", cookie)).status).toBe(200);
+    expect((await get("/api/entries/stale", cookie)).status).not.toBe(401);
+  });
+
+  test("logout ends the session server-side", async () => {
+    const cookie = (await login(PASS)).headers.get("set-cookie")!.split(";")[0]!;
+    await app.handle(new Request("http://localhost/api/auth/logout", { method: "POST", headers: { cookie } }));
+    expect((await get("/api/entries/stale", cookie)).status).toBe(401);
   });
 });
 

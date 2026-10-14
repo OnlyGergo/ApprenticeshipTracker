@@ -1,10 +1,16 @@
-import { Link, Links, Meta, NavLink, Outlet, Scripts, ScrollRestoration, useLocation } from "react-router";
+import { Link, Links, Meta, NavLink, Outlet, redirect, Scripts, ScrollRestoration, useLocation, useNavigate } from "react-router";
 import type { Route } from "./+types/root";
 import { StaleBanner } from "~/components/StaleBanner";
+import { Button } from "~/components/ui";
 import { api } from "~/lib/api";
 import "../style.css";
 
-export async function clientLoader() {
+export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const { pathname, search } = new URL(request.url);
+  if (pathname === "/login") return { stale: null };
+  // Client-side navigation can reach the app without a session, so check here too.
+  const me = await api.api.auth.me.get();
+  if (me.status === 401) throw redirect(`/login?next=${encodeURIComponent(pathname + search)}`);
   const { data } = await api.api.entries.stale.get();
   return { stale: data ?? null };
 }
@@ -43,6 +49,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App({ loaderData }: Route.ComponentProps) {
   const { stale } = loaderData;
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  // The login page is standalone: no nav, no banner.
+  if (pathname === "/login") return <Outlet />;
+
+  async function signOut() {
+    await api.api.auth.logout.post();
+    navigate("/login", { replace: true });
+  }
+
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur">
@@ -75,6 +90,9 @@ export default function App({ loaderData }: Route.ComponentProps) {
           >
             + Log entry
           </NavLink>
+          <Button variant="ghost" onClick={signOut} className="my-auto shrink-0 py-0.5">
+            Sign out
+          </Button>
         </div>
       </header>
       {stale && <StaleBanner lastEntryDate={stale.last_entry_date} daysSince={stale.days_since} after={stale.stale_after_days} />}

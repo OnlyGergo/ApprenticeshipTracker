@@ -29,7 +29,7 @@ bun run seed                            # creates data/app.db and loads server/d
 | `bun run typecheck` | Generates route types and runs `tsc` |
 | `bun run migrate` | Applies pending DB migrations (also done on server start) |
 
-Everything the server serves is behind HTTP Basic Auth. In dev, only `/api` (proxied) is gated; the Vite-served pages are not.
+Everything except the login page and static files needs a signed-in session. Sign in at `/login` with `BASIC_AUTH_USER` and the password whose hash is in `BASIC_AUTH_PASS_HASH` (`bun run hash-password`). The session is an HttpOnly cookie (30 days) held in server memory, so restarting the server means signing in again. In dev, only `/api` (proxied) is gated; the Vite-served pages are not, but the root loader sends you to `/login` when there's no session.
 
 ## Data
 
